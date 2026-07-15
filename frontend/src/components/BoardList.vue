@@ -7,7 +7,6 @@
         <h2 class="main-title">📋 게시판 목록</h2>
       </div>
 
-      <!-- [추가] 우측 정렬된 세련된 글쓰기 버튼 -->
       <div class="action-area">
         <el-button
           type="primary"
@@ -22,6 +21,50 @@
 
     <!-- 카드 쉐도우 컨테이너 -->
     <div class="board-card">
+      <!-- 🔍 [추가] 상단 검색 바 영역 -->
+      <div class="search-wrapper">
+        <el-row :gutter="12" type="flex" justify="start" align="middle">
+          <!-- 1. 검색 조건 드롭다운 -->
+          <el-col :span="5">
+            <el-select
+              v-model="searchCondition"
+              placeholder="검색 조건"
+              size="medium"
+              class="search-select"
+            >
+              <el-option label="전체" value="all"></el-option>
+              <el-option label="제목" value="title"></el-option>
+              <el-option label="작성자" value="writer"></el-option>
+              <el-option label="내용" value="content"></el-option>
+            </el-select>
+          </el-col>
+
+          <!-- 2. 검색어 입력창 -->
+          <el-col :span="10">
+            <el-input
+              placeholder="검색어를 입력해 주세요"
+              v-model="searchKeyword"
+              size="medium"
+              clearable
+              @clear="resetSearch"
+              @keyup.enter.native="handleSearch"
+            ></el-input>
+          </el-col>
+
+          <!-- 3. 검색 버튼 -->
+          <el-col :span="6">
+            <el-button
+              type="primary"
+              icon="el-icon-search"
+              size="medium"
+              @click="handleSearch"
+              >검색</el-button
+            >
+            <el-button size="medium" @click="resetSearch">초기화</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
       <!-- Element UI 테이블 -->
       <el-table
         :data="boardList"
@@ -120,6 +163,10 @@ export default {
       page: 1,
       size: 10,
       totalElements: 0,
+
+      // 💡 [추가] 검색 관련 데이터 상태 변수
+      searchCondition: "all", // 기본값 '전체'
+      searchKeyword: "", // 검색어 빈값
     };
   },
   created() {
@@ -133,12 +180,20 @@ export default {
       const date = cellValue || row.createdDate || row.regDate;
       return date ? moment(date).format("YYYY-MM-DD") : "-";
     },
+    // 💡 검색을 누르면 1페이지부터 보여줘야 하므로 페이지 초기화 후 목록 호출
+    handleSearch() {
+      this.page = 1;
+      this.getBoardList();
+    },
+    // 💡 목록 가져오기 로직에 검색 파라미터 추가
     getBoardList() {
       axios
         .get("http://localhost:8080/api/boards", {
           params: {
             page: this.page,
             size: this.size,
+            condition: this.searchCondition, // 👈 백엔드로 보낼 검색 조건
+            keyword: this.searchKeyword, // 👈 백엔드로 보낼 검색어
           },
         })
         .then((response) => {
@@ -152,25 +207,24 @@ export default {
           console.error("데이터 로드 실패:", error);
         });
     },
+    // 💡 [추가] 검색 필터 초기화 로직
+    resetSearch() {
+      this.searchCondition = "all";
+      this.searchKeyword = "";
+      this.page = 1;
+      this.getBoardList();
+    },
     handlePageChange(newPage) {
       this.page = newPage;
       this.getBoardList();
     },
     clickRow(row) {
-      // 행을 클릭하면 반드시 상세보기 팝업(detailPopup)을 호출하고, 해당 행(row) 데이터를 넘겨주어야 합니다.
       if (this.$refs.detailPopup) {
         this.$refs.detailPopup.getBoardDetail(row);
       }
     },
-    // [추가] 글쓰기 클릭 이벤트 핸들러
     goWrite() {
-      // 프로젝트 라우터 설계에 맞게 아래 주석 중 하나를 해제해서 사용해 보세요!
       this.$refs.registPopup.openPopup = true;
-      // 1. Vue Router 페이지 이동 방식 적용 시:
-      // this.$router.push("/write");
-
-      // 2. 만약 글쓰기도 팝업창 모달(el-dialog) 형태를 사용 중이시라면:
-      // this.$refs.writePopup.openPopup();
     },
   },
 };
@@ -192,7 +246,7 @@ export default {
   margin-bottom: 30px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end; /* 타이틀 하단 라인과 버튼 높이 정렬 */
+  align-items: flex-end;
 }
 
 .title-area .sub-title {
@@ -212,9 +266,9 @@ export default {
   margin: 0;
 }
 
-/* [추가] 글쓰기 버튼 스타일 고도화 */
+/* 글쓰기 버튼 스타일 고도화 */
 .write-btn {
-  border-radius: 20px !important; /* 둥글둥글하고 세련된 버튼 형태 */
+  border-radius: 20px !important;
   padding: 10px 22px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2) !important;
@@ -222,7 +276,7 @@ export default {
 }
 
 .write-btn:hover {
-  transform: translateY(-2px); /* 호버 시 위로 스르륵 떠오르는 애니메이션 */
+  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(64, 158, 255, 0.35) !important;
 }
 
@@ -230,13 +284,24 @@ export default {
   transform: translateY(0);
 }
 
-/* 카드 쉐도우 컨테이너 (부드러운 라운딩과 연한 그림자) */
+/* 카드 쉐도우 컨테이너 */
 .board-card {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(149, 157, 165, 0.12);
   border: 1px solid #ebeef5;
   overflow: hidden;
+}
+
+/* 💡 [추가] 검색바 래퍼 스타일 */
+.search-wrapper {
+  padding: 20px 24px;
+  background-color: #fafbfe;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.search-select {
+  width: 100%;
 }
 
 /* Element UI 테이블 커스텀 스타일 정의 */
@@ -247,7 +312,7 @@ export default {
 }
 
 .custom-table >>> th {
-  background-color: #fafbfe !important;
+  background-color: #ffffff !important; /* 검색 영역 배경 분리를 위해 흰색으로 변경 */
   color: #4a5568 !important;
   font-weight: 600 !important;
   padding: 16px 0 !important;
@@ -259,7 +324,6 @@ export default {
   border-bottom: 1px solid #edf2f7 !important;
 }
 
-/* 행 오버 스타일 (연한 블루 틴트 효과) */
 .custom-table >>> .el-table__row {
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -269,13 +333,11 @@ export default {
   background-color: rgba(64, 158, 255, 0.05) !important;
 }
 
-/* 인덱스 열 색상 처리 */
 .custom-table >>> .col-index {
   color: #a0aec0;
   font-weight: 500;
 }
 
-/* 제목 호버 효과 */
 .title-text {
   font-weight: 600;
   color: #2d3748;
@@ -286,7 +348,6 @@ export default {
   color: #409eff;
 }
 
-/* 작성자 이니셜 아바타 장식 */
 .writer-info {
   display: flex;
   align-items: center;
@@ -332,7 +393,6 @@ export default {
   color: #409eff;
 }
 
-/* 페이징 버튼 라운드 처리 */
 .custom-pagination >>> .btn-prev,
 .custom-pagination >>> .btn-next,
 .custom-pagination >>> .el-pager li {
