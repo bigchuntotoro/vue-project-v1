@@ -17,4 +17,8 @@ mybatis:
 
 logging:
   level:
-    com.example.board.mapper: TRACE
+    root: info
+    org.springframework.web: debug              # 💡 스프링 웹 요청/응답 상세 흐름 파악
+    org.springframework.web.servlet: debug      # 💡 컨트롤러 매핑 및 예외 추적
+    com.example.board.mapper: trace             # 🎯 작성하신 Mapper가 실행하는 SQL 쿼리와 파라미터 값 출력
+    org.mybatis: trace                          # 🎯 MyBatis 내부 쿼리 실행 디버깅

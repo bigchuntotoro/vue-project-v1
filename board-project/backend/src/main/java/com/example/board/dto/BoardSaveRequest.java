@@ -3,6 +3,7 @@ package com.example.board.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile; // 💡 임포트 추가
 
 @Data
 public class BoardSaveRequest {
@@ -17,4 +18,7 @@ public class BoardSaveRequest {
 
     @NotBlank(message = "내용을 입력해주세요.")
     private String content;
+
+    // 📎 [추가] 프론트엔드 FormData의 "file" 키값과 자동으로 매핑되는 멀티파트 파일 필드
+    private MultipartFile file;
 }

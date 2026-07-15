@@ -90,6 +90,20 @@
           </template>
         </el-table-column>
 
+        <!-- 📎 첨부파일 아이콘 표시 열 -->
+        <el-table-column label="첨부" width="70" align="center">
+          <template slot-scope="scope">
+            <!-- 
+      DB에서 조회된 'originalFileName'이 비어있지 않거나 
+      null이 아닐 때만 클립 아이콘을 띄웁니다.
+    -->
+            <span v-if="scope.row.originFileName" class="file-icon-wrapper">
+              <i class="el-icon-paperclip file-icon"></i>
+            </span>
+            <span v-else class="no-file">-</span>
+          </template>
+        </el-table-column>
+
         <!-- 내용 -->
         <el-table-column
           prop="content"
@@ -407,5 +421,27 @@ export default {
   color: #ffffff !important;
   border-color: #409eff !important;
   box-shadow: 0 4px 10px rgba(64, 158, 255, 0.25);
+}
+
+/* 📎 [추가] 첨부파일 아이콘 스타일 */
+.file-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: rgba(64, 158, 255, 0.1); /* Element UI Primary 연한 배경 */
+  border-radius: 6px;
+  color: #409eff; /* 파란색 아이콘 */
+}
+
+.file-icon {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.no-file {
+  color: #cbd5e0; /* 파일이 없을 때 표시할 대시(-) 회색 처리 */
+  font-size: 12px;
 }
 </style>

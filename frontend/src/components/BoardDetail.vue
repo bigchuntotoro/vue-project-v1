@@ -4,14 +4,41 @@
     <el-dialog
       title="글 상세 보기"
       :visible.sync="openDetail"
-      width="30%"
+      width="50%"
       center
     >
-      글 번호 : {{ boardDetail.bno }} <br />
-      제목 : {{ boardDetail.title }} <br />
-      등록일 : {{ boardDetail.regDate }} <br />
-      내용 : {{ boardDetail.content }} <br />
-      작성자 : {{ boardDetail.writer }} <br />
+      <div class="detail-container">
+        <p><strong>글 번호 :</strong> {{ boardDetail.bno }}</p>
+        <p><strong>제목 :</strong> {{ boardDetail.title }}</p>
+        <p>
+          <strong>등록일 :</strong>
+          {{ boardDetail.regDate || boardDetail.createdDate }}
+        </p>
+        <p><strong>작성자 :</strong> {{ boardDetail.writer }}</p>
+        <p><strong>내용 :</strong></p>
+        <div class="content-box">
+          {{ boardDetail.content }}
+        </div>
+
+        <!-- 🖼️ [추가] 첨부파일이 이미지(그림) 형식일 때만 보여주는 영역 -->
+        <div v-if="isImageFile" class="image-preview-zone">
+          <img :src="imageUrl" alt="첨부 이미지" class="attached-image" />
+        </div>
+
+        <!-- 📎 [추가] 첨부파일 다운로드 영역 (이미지 유무 상관없이 파일이 존재하면 노출) -->
+        <div v-if="boardDetail.originFileName" class="file-download-zone">
+          <i class="el-icon-paperclip"></i>
+          <strong>첨부파일 :</strong>
+          <a
+            :href="imageUrl"
+            :download="boardDetail.originFileName"
+            class="file-link"
+          >
+            {{ boardDetail.originFileName }} (클릭 시 다운로드)
+          </a>
+        </div>
+      </div>
+
       <el-row type="flex" justify="end" style="margin-top: 30px">
         <el-button type="primary" @click="clcikEditButton()">수정</el-button>
         <el-button type="danger" @click="clcikDeleteButton()">삭제</el-button>
@@ -31,7 +58,7 @@ export default {
   data() {
     return {
       openDetail: false,
-      boardDetail: [],
+      boardDetail: {}, // 기존 배열([])을 상세 객체인 빈 중괄호({})로 수정
     };
   },
   computed: {
@@ -42,29 +69,42 @@ export default {
       };
       return params;
     },
+
+    // 💡 [추가] 첨부파일이 이미지 형식(jpg, jpeg, png, gif, webp)인지 체크
+    isImageFile() {
+      if (!this.boardDetail || !this.boardDetail.storeFileName) return false;
+
+      const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+      // 파일명에서 확장자만 추출
+      const extension = this.boardDetail.storeFileName
+        .split(".")
+        .pop()
+        .toLowerCase();
+      return allowedExtensions.includes(extension);
+    },
+
+    // 💡 [추가] 백엔드로부터 이미지 파일을 조회/스트리밍하는 URL 매핑
+    imageUrl() {
+      if (!this.boardDetail || !this.boardDetail.storeFileName) return "";
+      // 백엔드 이미지 스트리밍 API 주소 연결
+      return `http://localhost:8080/api/images/${this.boardDetail.storeFileName}`;
+    },
   },
   methods: {
     getBoardDetail(row) {
-      // 1. 목록에서 넘어온 row 데이터 중 글 번호(id 또는 bno)를 확보합니다.
-      // 백엔드 필드명 스펙에 맞춰 row.id 또는 row.bno 중 매핑되는 것을 사용합니다.
       const boardId = row.id || row.bno;
 
-      // 디버깅용 로그: 실제로 어떤 ID 값이 추출되었는지 브라우저 콘솔에서 확인 가능합니다.
       console.log("상세조회 요청 ID:", boardId);
       console.log("목록에서 전달받은 row 전체 데이터:", row);
 
-      // 2. 백엔드 @GetMapping("/{id}") 구조에 맞게 URL 패스에 ID를 붙여 GET 요청을 보냅니다.
       axios
         .get(`http://localhost:8080/api/boards/${boardId}`)
         .then((response) => {
           console.log("서버 응답 데이터:", response.data);
 
-          // 3. 백엔드가 Board 객체를 통째로 바로 리턴하므로 response.data를 바로 매핑합니다.
           if (response.data) {
             this.boardDetail = response.data;
 
-            // 만약 기존 el-dialog 템플릿 코드에서 {{ boardDetail.bno }} 구조를 쓰고 있다면
-            // 백엔드 변수명(id)과 맞춰주기 위해 안전하게 bno 필드도 채워줍니다.
             if (!this.boardDetail.bno && this.boardDetail.id) {
               this.boardDetail.bno = this.boardDetail.id;
             }
@@ -79,7 +119,6 @@ export default {
     clcikEditButton() {
       this.openDetail = false;
 
-      // 💡 registPopup.bno 대신 registPopup.id 에 값을 할당합니다.
       this.$refs.registPopup.id = this.boardDetail.id || this.boardDetail.bno;
       this.$refs.registPopup.writer = this.boardDetail.writer;
       this.$refs.registPopup.title = this.boardDetail.title;
@@ -88,7 +127,6 @@ export default {
       this.$refs.registPopup.openPopup = true;
     },
     clcikDeleteButton() {
-      // boardDetail에 들어있는 id 값을 확실하게 가져옵니다.
       const boardId = this.boardDetail.id || this.boardDetail.bno;
 
       if (!boardId) {
@@ -96,14 +134,12 @@ export default {
         return;
       }
 
-      // 💡 메서드를 delete로 바꾸고 URL 뒤에 id를 붙여서 요청합니다.
       axios
         .delete(`http://localhost:8080/api/boards/${boardId}`)
         .then((response) => {
-          // 백엔드 리턴 방식에 따라 response 조건은 조정 가능 (예: response.data 성공 여부 등)
           if (response) {
-            this.openDetail = false; // 상세보기 팝업 닫기
-            this.reload(); // 목록 새로고침
+            this.openDetail = false;
+            this.reload();
             this.$message({
               message: "글이 성공적으로 삭제되었습니다.",
               type: "success",
@@ -116,11 +152,65 @@ export default {
         });
     },
     reload() {
-      // 목록을 재로딩을 위해 이벤트 emit
       this.$emit("reload");
     },
   },
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.detail-container {
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.content-box {
+  background-color: #fcfcfc;
+  border: 1px solid #ebeef5;
+  padding: 15px;
+  border-radius: 4px;
+  min-height: 100px;
+  white-space: pre-wrap; /* 줄바꿈 유지 */
+  margin-bottom: 20px;
+}
+
+/* 🖼️ 이미지 시각 영역 스타일 */
+.image-preview-zone {
+  text-align: center;
+  margin: 20px 0;
+  background-color: #fafafa;
+  border: 1px dashed #dcdfe6;
+  padding: 15px;
+  border-radius: 6px;
+}
+
+.attached-image {
+  max-width: 100%; /* 부모 박스를 넘지 않게 조정 */
+  max-height: 400px; /* 이미지 높이가 너무 높을 시 스크롤 가두기용 */
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 📎 다운로드 링크 영역 스타일 */
+.file-download-zone {
+  background-color: #f4f4f5;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.file-link {
+  margin-left: 8px;
+  color: #409eff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+  color: #66b1ff;
+}
+</style>
