@@ -94,9 +94,9 @@
         <el-table-column label="첨부" width="70" align="center">
           <template slot-scope="scope">
             <!-- 
-      DB에서 조회된 'originalFileName'이 비어있지 않거나 
-      null이 아닐 때만 클립 아이콘을 띄웁니다.
-    -->
+        DB에서 조회된 'originalFileName'이 비어있지 않거나 
+        null이 아닐 때만 클립 아이콘을 띄웁니다.
+        -->
             <span v-if="scope.row.originFileName" class="file-icon-wrapper">
               <i class="el-icon-paperclip file-icon"></i>
             </span>
