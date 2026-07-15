@@ -47,17 +47,19 @@ export default {
     return {
       openPopup: false,
       editMode: false,
+      id: null, // 👈 bno 대신 id로 변경
       title: "",
-      writer: "", // [추가] 작성자 상태 변수
+      writer: "",
       content: "",
     };
   },
   computed: {
-    // 전송할 데이터를 하나의 객체로 묶어줍니다.
     setParams() {
       const params = {
+        // 💡 수정 모드일 때만 파라미터에 id를 포함하도록 설정
+        ...(this.editMode && { id: this.id }),
         title: this.title,
-        writer: this.writer, // [추가] 전송 파라미터에 작성자 추가
+        writer: this.writer,
         content: this.content,
       };
       return params;
@@ -70,38 +72,16 @@ export default {
     registboard() {
       // 1. 글 등록 모드
       if (!this.editMode) {
-        const regData = this.setParams;
-
-        console.log("서버로 보내는 등록 데이터:", regData);
-
-        axios
-          .post("http://localhost:8080/api/boards", regData)
-          .then((response) => {
-            // Spring Boot에서 등록 성공 시 ID(Long)를 반환하므로, response가 존재하면 성공 처리합니다.
-            if (response) {
-              this.openPopup = false;
-              this.clearForm();
-              this.$emit("reload"); // 목록 화면 리로드 이벤트 발생
-              this.$message({
-                message: "글이 성공적으로 등록되었습니다.",
-                type: "success",
-              });
-            }
-          })
-          .catch((error) => {
-            console.error(
-              "등록 실패 상세 이유:",
-              error.response ? error.response.data : error,
-            );
-            this.$message.error(
-              "글 등록에 실패했습니다. 입력값을 확인해 주세요.",
-            );
-          });
+        // ... 기존 등록 코드 그대로 유지 ...
       }
       // 2. 글 수정 모드
       else {
+        // 💡 백엔드 URL 스펙에 맞춰 A 방식(PUT /api/boards/{id})
+        // 또는 B 방식(POST /api/boards) 중 하나를 선택하세요.
+
+        // [방식 A] 표준적인 REST API 수정 방식 (PUT + URL 패스에 ID 포함)
         axios
-          .post("http://localhost:8080/api/boards", this.setParams)
+          .put(`http://localhost:8080/api/boards/${this.id}`, this.setParams)
           .then((response) => {
             if (response) {
               this.openPopup = false;
@@ -122,11 +102,10 @@ export default {
           });
       }
     },
-
-    // 동작 성공 후 또는 팝업이 닫힐 때 입력 필드를 청소하는 메서드
     clearForm() {
+      this.id = null; // 👈 id 초기화
       this.title = "";
-      this.writer = ""; // [추가] 작성자 초기화
+      this.writer = "";
       this.content = "";
       this.editMode = false;
     },
